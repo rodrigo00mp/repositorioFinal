@@ -1,0 +1,120 @@
+---
+title: "actVentaTelevisores"
+author: "Rodrigo Montelongo"
+date: "12/4/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Se crea nuestro vector con la información de los televisores vendidos.
+```{r}
+t=1:16
+ventas = c(4.8,4.1,6.0,6.5,5.8,5.2,6.8,7.4,6.0,5.6,7.5,7.8,6.3,5.9,8.0,8.4)
+
+```
+
+Se hace un gráfico de dispersión para ver las ventas por trimestre. 
+```{r}
+plot(t, ventas, type = "o", col = "red", main = "Ventas por trimestre")
+```
+Podemos ver que existe una tendencia muy marcada siendo las ventas más bajas en el primer y segundo trimestre y las más altas en el tercero y cuarto.
+
+Se realiza el análisis de tendencia y estacionalidad.
+
+```{r}
+ventas = c(4.8, 4.1, 6, 6.5, 5.8, 5.2, 6.8, 7.4, 6, 5.6, 7.5, 7.8, 6.3, 5.9, 8, 8.4)
+x= ts(ventas, frequency = 4, start(c(2016,1)))
+plot.ts(x, col = "red")
+T = decompose(x, type = "m")
+plot(T, col ="blue")
+```
+Se puede ver una clara tendencia a la alza con el tiempo.
+
+Asimismo, se pueden obtener los índices estacionales de cada trimestre.
+
+```{r}
+T$seasonal
+```
+
+Con los índices estacionales podemos confirmar la relación negativa en los primeros 2 trimestres y la relación negativa los últimos 2 trimestres.
+
+Se procede a realizar el anñalis del modelo lineal de la tendencia:
+
+```{r}
+ventas_desestacionalizadas = (T$x)/(T$seasonal)
+plot(t, ventas_desestacionalizadas)
+```
+
+```{r}
+x3 = 1:16
+y3 = ventas_desestacionalizadas
+N3 = lm(y3 ~ x3)
+N3
+summary(N3)
+plot(x3, y3, type = "l")
+abline(N3, col = "red")
+text(6, 7, " ventas = -3.5443 + 0.4847 trimestre")
+```
+
+El modelo explica un 91% de los datos aproximadament y cuenta con un P-value menor a 0.05, por lo que podemos decir que es significativo. 
+
+Realizamos un análisis de residuos para validar el modelo. También vemos la significancia de beta1. 
+
+```{r}
+confint(N3)
+plot(N3)
+```
+
+En la primer gráfica se puede ver como existe homocedasticidad en los residuos. En la segunda gráfica se puede ver que existe normalidad en los residuos. Asimismo podemos ver que beta1 sí tiene significancia. 
+
+Por último solo queda verificar que la media de los residuos sea 0. Al hacer el cálculo vemos que el número es prácticamente 0, por lo cual podemos validar el modelo. 
+
+```{r}
+mean(N3$residuals)
+```
+
+Se calcula el cuadrado medio de los errores (CEM).
+
+```{r}
+f = function(x) {4.85 + 0.17*x}
+a1 = T$seasonal[1]
+a2 =T$seasonal[2]
+a3 = T$seasonal[3]
+a4 = T$seasonal[4]
+predicciones = c(f(1)*a1, f(2)*a2, f(3)*a3, f(4)*a4, f(5)*a1, f(6)*a2, f(7)*a3, f(8)*a4, f(9)*a1, f(10)*a2, f(11)*a3, f(12)*a4, f(13)*a1, f(14)*a2, f(15)*a3, f(16)*a4)
+e = NA
+for(i in 1:(16-3)){ 
+e[i+3] = predicciones[i+3] -
+ventas[i+3]}
+T=data.frame(t,predicciones,ventas_desestacionalizadas,e^2)
+CME=mean(e^2,na.rm=TRUE)
+CME
+```
+
+A continuación realizamos un gráfico con los valores de las ventas vs los valores de predicción. 
+```{r}
+plot(t, ventas, type = "o", col = "red", main = "Ventas")
+
+predicciones = c(f(1)*a1, f(2)*a2, f(3)*a3, f(4)*a4, f(5)*a1, f(6)*a2, f(7)*a3, f(8)*a4, f(9)*a1, f(10)*a2, f(11)*a3, f(12)*a4, f(13)*a1, f(14)*a2, f(15)*a3, f(16)*a4)
+
+plot(t, predicciones,type = "o", col = "blue", main = "Predicciones")
+
+```
+Se puede apreciar que a partir del tercer trimestre se observan buenos resultados puesto que las predicciones se acercan a los valores reales.
+
+Con esto se pueden predecir las ventas trimestrales del siguiente año.
+```{r}
+
+predicciones = c(f(1)*a1, f(2)*a2, f(3)*a3, f(4)*a4, f(5)*a1, f(6)*a2, f(7)*a3, f(8)*a4, f(9)*a1, f(10)*a2, f(11)*a3, f(12)*a4, f(13)*a1, f(14)*a2, f(15)*a3, f(16)*a4,f(17)*a1, f(18)*a2, f(19)*a3, f(20)*a4)
+t2 = 1:20
+plot(t2, predicciones,type = "o", col = "blue", main = "Prediccion de ventas quinto año")
+
+
+```
+
+Conclusión
+
+El modelo obtenido sí presenta predicciones acertadas tomando en cuenta las tendencias y ciclos de la serie de tiempo, teniendo un 91% de valor de r-ajustada cuadrada. Después de hacer el análisis de los residuos se demostró que había homostacidad, normalidad y media igual a 0. Podemos concluir que la predicción del quinto año será sumamente acertada si no existen eventos que afecten la tendencia actual. 
