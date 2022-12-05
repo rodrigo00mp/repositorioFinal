@@ -1,0 +1,128 @@
+---
+title: "actPecesyMercurio"
+author: "Rodrigo Montelongo"
+date: "12/3/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+#library(FactoMineR)
+library(factoextra)
+library(ggplot2) 
+library(ggpubr)
+```
+
+Lo primero que se hizo fue cargar los datos del archivo csv. 
+
+```{r}
+#leemos los datos
+
+data = read.csv("mercurio.csv")
+data
+```
+Por la información que se da en el problema se puede saber que las variables representan:
+    X1 = número de indentificación
+    X2 = nombre del lago
+    X3 = alcalinidad (mg/l de carbonato de calcio)
+    X4 = PH
+    X5 = calcio (mg/l)
+    X6 = clorofila (mg/l)
+    X7 = concentración media de mercurio (parte por millón) en el tejido muscualar del grupo de peces estudiados en cada lago
+    X8 = número de peces estudiados en el lago
+    X9 = mínimo de la concentración de mercurio en cada grupo de peces
+    X10 = máximo de la concentración de mercurio en cada grupo de peces
+    X11 = estimación (mediante regresión) de la concentración de mercurio en el pez de 3 años (o promedio de mercurio cuando la edad no está disponible)
+    X12 = indicador de la edad de los peces (0: jóvenes; 1: maduros)
+
+Se procede a hacer un poco de exploración básica de los datos.
+
+```{r}
+str(data)
+```
+
+Vemos que la única variable que no es numérica es la X2. Exploremos esta variable para ver si es útil y necesitamos transformarla para poder usarla.
+
+```{r}
+unique(data$X2)
+```
+
+Todos los registros son diferentes, por lo que podemos eliminarla de nuestros datos. Esto también nos ayudará para poder hacer el análisis de componentes principales ya que necesitamos variables numéricas.
+
+```{r}
+data =subset(data, select = -X2)
+```
+
+Otra variable que podemos eliminar es el número de identificación.
+
+```{r}
+data =subset(data, select = -X1)
+
+```
+
+También podemos crear una matriz de correlación para identificiar las variables que parecen tener mayor correlación con la concentración de mercurio.
+
+```{r}
+cor(data)
+
+```
+
+En este caso vemos que las que tienen mayor correlación con la concentración de mercurio son:
+  X9 (mínimo de concentración)
+  X10(máximo de concentración)
+  X3(alcalinidad)
+  X4(PH)
+  X6(clorofila)
+
+
+
+Ahora veremos la distribución de la concentración de mercurio. 
+
+```{r}
+hist(data$X7)
+```
+Como se puede observar podemos ver que existen varios lagos que están por el límite de lo permitido de concentración de mercurio en los peces, la cual es 0.5.
+
+
+Procedemos a hacer el análisis de componentes principales. Agregamos scale = True para normalizar los datos.
+
+```{r}
+cpa = prcomp(data, scale = TRUE)
+cpa
+biplot(cpa, scale = 0, cex = 0.5, col = c("dodgerblue3", "deeppink3"))
+fviz_pca_ind(cpa, col.ind = "blue", addEllipses = TRUE, repel = TRUE)
+fviz_pca_var(cpa)
+fviz_screeplot(cpa)
+print(summary(cpa))
+```
+
+En el análisis de componentes podemos ver que el 87.4% de la varianza se ve explicado en 4 componentes. Las variables que más se ven presentes en estos componentes son:
+- PC1:
+  - X3: Alcalinidad
+  - X7: Concentración de mercurio
+  - X9: Mínimo concentración de mercurio
+  - X10: Máxima concentración de mercurio
+  - X11: Estimación concentración de mercurio
+- PC2:
+  - X3: Alcalinidad
+  - X4: PH 
+  - X5: Calcio
+  - X8: Número de peces estudiados
+  - X12: Edad del pescado
+- PC3:
+  - X3: Alcalinidad
+  - X5: Calcio
+  - X8: Numero de peces estudiados
+  - X9: Mínimo de concentración de mercurio
+- PC4:
+  - X5: Calcio
+  - X6: Clorofila
+  - X8: Número de peces estudiados
+  - X12: Edad del pescado
+
+Conclusión 
+
+Las variables que parecen afectar más la concentración de mercurio que vemos en los peces son la concentración mínima, la concentración máxima y la estimación de mercurio. No obstante, estas están muy relacionadas con la variable que queremos predecir por lo que el análisis está muy sesgado. Las variables que mayor relación tienen sin contar las antes mencionadas son el calcio, la alcalinidad y el PH. 
